@@ -1,0 +1,43 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-attach:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential build-essential
+
+      - name: build upstream core
+        run: make core
+
+      - name: build libretro core
+        run: make libretro
+
+      - name: collect assets
+        run: |
+          mkdir -p dist
+          cp -v *.so dist/ 2>/dev/null || true
+          tar cf dist/ti99-core-source.tar upstream/src/core/*.o 2>/dev/null || true
+          ( cd dist && sha256sum * > SHA256SUMS ) || true
+          ls -la dist
+
+      - name: attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          fail_on_unmatched_files: false

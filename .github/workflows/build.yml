@@ -1,0 +1,78 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  upstream:
+    name: upstream (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-latest
+          - name: linux-aarch64
+            os: ubuntu-24.04-arm
+          - name: macos
+            os: macos-latest
+          - name: windows
+            os: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # The libretro core drives upstream/src/core, which needs no SDL: that
+      # dependency belongs to ti99sim's own frontend.
+      - name: build upstream core
+        shell: bash
+        run: make core
+
+      - name: collect artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          find upstream/src/core -name '*.o' | wc -l | sed 's/^/core objects: /'
+          tar cf dist/ti99-core-${{ matrix.name }}.tar upstream/src/core/*.o
+          ( cd dist && sha256sum *.tar > SHA256SUMS )
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ti99-upstream-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: warn
+
+  # The libretro core itself.
+  libretro:
+    name: libretro core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential
+
+      - name: build libretro core
+        run: make libretro
+
+      # The console ROMs are copyrighted and not in the repo, so this only
+      # proves the binary runs and refuses to load without them.
+      - name: smoke-test the core
+        run: |
+          make bootcheck
+          ./tools/bootcheck "" 1 2>&1 | tee /tmp/smoke.log
+          grep -q "load_game failed" /tmp/smoke.log
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ti99_libretro-linux-x86_64
+          path: '*.so'

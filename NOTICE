@@ -1,0 +1,9 @@
+ti99-libretro vendors ti99sim, a Texas Instruments TI-99/4A emulator.
+
+    ti99sim  Copyright (C) 1999-2024  Michael D. Rousseau and contributors
+    upstream https://github.com/billzajac/ti99sim (mirror of the original)
+    licence  GNU General Public Licence v2 or later (see upstream/COPYING)
+
+The libretro frontend in src/ is a separate work by the same authors as
+retrods, distributed under the same licence (GPL-2.0-or-later) because it is
+linked against ti99sim.

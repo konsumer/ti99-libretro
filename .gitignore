@@ -1,0 +1,8 @@
+# build artifacts
+*.o
+*.so
+tools/bootcheck
+dist/
+
+# editor / OS
+.DS_Store
